@@ -1,5 +1,6 @@
 venv
-versions/
+!/versions
+/versions/*
 __pycache__
 .idea
 idea
