@@ -7,7 +7,7 @@ from config import settings
 
 def init_db(db: Session) -> None:
 
-    user = services.user_crud.get_by_email(db, email=settings.FIRST_SUPERUSER)
+    user = services.user_crud.get(db, email=settings.FIRST_SUPERUSER)
     if not user:
         user_in = schemas.UserCreate(
             email=settings.FIRST_SUPERUSER,
