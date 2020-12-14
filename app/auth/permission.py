@@ -43,7 +43,7 @@ def get_current_active_user(
     return current_user
 
 
-def get_current_active_superuser(
+def get_current_superuser(
         current_user: models.User = Depends(get_current_user),
 ) -> models.User:
     if not services.user_crud.is_superuser(current_user):
