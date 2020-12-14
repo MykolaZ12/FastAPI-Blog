@@ -14,4 +14,4 @@ def init_db(db: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = services.user_crud.create(db, obj_in=user_in)  # noqa
+        user = services.user_crud.create(db, schema=user_in)  # noqa

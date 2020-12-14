@@ -10,11 +10,11 @@ from config.security import get_password_hash, verify_password
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
-    def create(self, db: Session, *, obj_in: UserCreate) -> User:
+    def create(self, db: Session, *, schema: UserCreate) -> User:
         db_obj = User(
-            email=obj_in.email,
-            hashed_password=get_password_hash(obj_in.password),
-            is_superuser=obj_in.is_superuser,
+            email=schema.email,
+            hashed_password=get_password_hash(schema.password),
+            is_superuser=schema.is_superuser,
         )
         db.add(db_obj)
         db.commit()
