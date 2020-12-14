@@ -9,10 +9,12 @@ class Post(Base):
     __tablename__ = "post"
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    slug = Column(String, unique=True)
     title = Column(String(255))
     text = Column(String)
     date_created = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())
+    is_active = Column(Boolean, default=True)
 
     user_id = Column(Integer, ForeignKey("user.id"))
     user = relationship(User, back_populates="post")
