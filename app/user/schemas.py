@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
@@ -8,6 +9,9 @@ class UserBase(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = True
     is_superuser: bool = False
+
+    class Config:
+        orm_mode = True
 
 
 # Properties to receive via API on creation
@@ -21,18 +25,23 @@ class UserUpdate(UserBase):
     password: Optional[str] = None
 
 
-class UserInDBBase(UserBase):
-    id: Optional[int] = None
-
-    class Config:
-        orm_mode = True
-
-
-# Additional properties to return via API
-class User(UserInDBBase):
-    pass
-
-
-# Additional properties stored in DB
-class UserInDB(UserInDBBase):
+# Properties stored in DB
+class UserInDB(UserBase):
+    id: int
     hashed_password: str
+
+
+# Properties in response
+class UserInResponse(UserBase):
+    id: int
+    full_name: Optional[str] = None
+    date_registrations: datetime
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenPayload(BaseModel):
+    sub: Optional[int] = None

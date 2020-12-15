@@ -1,13 +1,10 @@
-from typing import Generator
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.auth import schemas
-from app.user import models, services
+from app.user import models, services, schemas
 from config import settings, security
 from db.db import get_db
 
