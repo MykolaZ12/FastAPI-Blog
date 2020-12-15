@@ -87,3 +87,13 @@ class PostInResponse(PostBase):
     date_created: datetime
     tag: Optional[List[TagInResponse]] = None
     comment: Optional[List[CommentInResponse]] = None
+
+
+# Like
+class Like(BaseModel):
+    id: int
+    user_id: int
+    post_id: int
+
+    class Config:
+        orm_mode = True

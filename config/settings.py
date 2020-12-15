@@ -28,5 +28,5 @@ SMTP_TLS = local_config.SMTP_TLS
 SMTP_USER = local_config.SMTP_USER
 SMTP_PASSWORD = local_config.SMTP_PASSWORD
 
-
+MEDIA_PATH = "media/user_image/"
 

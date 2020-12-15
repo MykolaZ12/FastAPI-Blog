@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from starlette.background import BackgroundTasks
 
 from app.user import services, schemas
-from app.user.services import generate_password_reset_token, send_reset_password_email, \
-    verify_password_reset_token
+from app.user.services import  send_reset_password_email
 from config import settings, security
-from config.security import get_password_hash
+from config.security import get_password_hash, generate_password_reset_token, \
+    verify_password_reset_token
 from db.db import get_db
 
 router = APIRouter()

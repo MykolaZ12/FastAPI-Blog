@@ -1,10 +1,14 @@
 import logging
+import re
+import shutil
+import uuid
 from datetime import timedelta, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import emails
 from emails.template import JinjaTemplate
+from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from jose import jwt
 
@@ -59,6 +63,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 user_crud = CRUDUser(User)
 
 
+def follow(action: str, db: Session, user_id: int, current_user_id: int):
+    follower_user = user_crud.get(db=db, id=current_user_id)
+    followed_user = user_crud.get(db=db, id=user_id)
+
+    if action == "follow":
+        follower_user.following.append(followed_user)
+    elif action == "unfollow":
+        follower_user.following.remove(followed_user)
+
+    db.add(follower_user)
+    db.commit()
+    db.refresh(follower_user)
+    return follower_user
+
+
 def send_email(
         email_to: str,
         subject_template: str = "",
@@ -79,7 +98,6 @@ def send_email(
     if settings.SMTP_PASSWORD:
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, render=environment, smtp=smtp_options)
-    print(response.status_code)
     logging.info(f"send email result: {response}")
 
 
@@ -124,20 +142,21 @@ def send_new_account_email(email_to: str, username: str, password: str) -> None:
     )
 
 
-def generate_password_reset_token(email: str) -> str:
-    delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
-    now = datetime.utcnow()
-    expires = now + delta
-    exp = expires.timestamp()
-    encoded_jwt = jwt.encode(
-        {"exp": exp, "nbf": now, "sub": email}, settings.SECRET_KEY, algorithm=security.ALGORITHM,
-    )
-    return encoded_jwt
+def generate_unique_img_name(image: UploadFile = File(...)):
+    name, ext = re.split("\.", image.filename)
+    file_name = name + f'_{uuid.uuid4().hex}.{ext}'
+    return file_name
 
 
-def verify_password_reset_token(token: str) -> Optional[str]:
-    try:
-        decoded_token = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        return decoded_token["sub"]
-    except jwt.JWTError:
-        return None
+def save_image_in_db(db: Session, file_path: str, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+    user.image = file_path
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def save_image_in_folder(file_path: str, image: UploadFile = File(...)):
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)

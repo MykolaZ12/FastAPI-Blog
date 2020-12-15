@@ -1,6 +1,6 @@
 from typing import Any, List
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from fastapi.encoders import jsonable_encoder
 from pydantic.networks import EmailStr
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from starlette.background import BackgroundTasks
 from app.user import schemas, services, models, permission
 from app.user.services import send_new_account_email
 from config import settings
+from config.settings import MEDIA_PATH
 from db.db import get_db
 
 router = APIRouter()
@@ -156,3 +157,72 @@ def update_user(
         )
     user = services.user_crud.update(db, db_obj=user, obj_in=user_in)
     return user
+
+
+@router.post("/follow/{id}")
+def follow_user(
+        *,
+        id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(permission.get_current_active_user)
+):
+    services.follow(action="follow", db=db, user_id=id, current_user_id=current_user.id)
+    return {"msg": "You are not following this user now"}
+
+
+@router.post("/unfollow/{id}")
+def unfollow_user(
+        *,
+        id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(permission.get_current_active_user)
+):
+    services.follow(action="unfollow", db=db, user_id=id, current_user_id=current_user.id)
+    return {"msg": "Now you follow this user"}
+
+
+@router.put("/update-avatar/me")
+async def update_image_me(
+        *,
+        db: Session = Depends(get_db),
+        image: UploadFile = File(...),
+        current_user: models.User = Depends(permission.get_current_active_user)
+):
+    """
+    User updates his own image
+    """
+    if image.content_type not in ['image/jpeg', 'image/png']:
+        raise HTTPException(status_code=406, detail="Only .jpeg or .png  files allowed")
+
+    file_name = services.generate_unique_img_name(image)
+    file_path = MEDIA_PATH + file_name
+    services.save_image_in_db(db=db, user_id=current_user.id, file_path=file_path)
+    services.save_image_in_folder(image=image, file_path=file_path)
+
+    return {
+        "id": current_user.id,
+        "filename": image.filename
+    }
+
+
+@router.put("/update-avatar/{id}", dependencies=[Depends(permission.get_current_user)])
+async def update_image_user(
+        *,
+        id: int,
+        db: Session = Depends(get_db),
+        image: UploadFile = File(...),
+):
+    """
+    Superuser updates another user's image
+    """
+    if image.content_type not in ['image/jpeg', 'image/png']:
+        raise HTTPException(status_code=406, detail="Only .jpeg or .png  files allowed")
+
+    file_name = services.generate_unique_img_name(image=image)
+    file_path = MEDIA_PATH + file_name
+    services.save_image_in_db(db=db, user_id=id, file_path=file_path)
+    services.save_image_in_folder(image=image, file_path=file_path)
+    return {
+        "id": id,
+        "filename": file_name
+    }

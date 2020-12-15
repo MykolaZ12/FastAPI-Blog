@@ -20,7 +20,7 @@ class User(Base):
     full_name = Column(String(255))
     date_registrations = Column(DateTime(), default=datetime.utcnow, index=True)
     last_login = Column(DateTime(), nullable=True)
-    is_active = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     is_staff = Column(Boolean, default=False)
     avatar = Column(String, nullable=True)
