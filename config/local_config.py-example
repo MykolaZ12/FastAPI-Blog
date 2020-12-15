@@ -1,0 +1,10 @@
+SECRET_KEY = "SECRET"
+
+EMAILS_FROM_NAME = "Desired Name"
+EMAILS_FROM_EMAIL = "your@email.com"
+
+SMTP_HOST = "your mail server"
+SMTP_PORT = 587
+SMTP_TLS = True
+SMTP_USER = "your@email.com"
+SMTP_PASSWORD = "strong_password"

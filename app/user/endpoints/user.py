@@ -2,38 +2,25 @@ from typing import Any, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic.networks import EmailStr
 from sqlalchemy.orm import Session
+from starlette.background import BackgroundTasks
 
-from app.auth import permission
-from app.auth.schemas import Token
-from app.user import schemas, services, models
-from config import settings, security
+from app.user import schemas, services, models, permission
+from app.user.services import send_new_account_email
+from config import settings
 from db.db import get_db
 
 router = APIRouter()
 
 
-@router.post("/login/access-token", response_model=Token)
-async def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    """ OAuth2 compatible token login, get an access token for future requests
-    """
-    user = services.user_crud.authenticate(db=db, email=form_data.username, password=form_data.password)
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    token = security.create_access_token(user.id)
-    return Token(access_token=token, token_type="bearer")
-
-
-@router.get("/", response_model=List[schemas.User])
+@router.get("/",
+            response_model=List[schemas.UserInResponse],
+            dependencies=[Depends(permission.get_current_superuser)])
 def read_users(
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-    current_user: models.User = Depends(permission.get_current_superuser),
+        db: Session = Depends(get_db),
+        skip: int = 0,
+        limit: int = 100,
 ) -> Any:
     """
     Retrieve users.
@@ -42,12 +29,14 @@ def read_users(
     return users
 
 
-@router.post("/", response_model=schemas.User)
+@router.post("/",
+             response_model=schemas.UserInResponse,
+             dependencies=[Depends(permission.get_current_superuser)])
 def create_user(
-    *,
-    db: Session = Depends(get_db),
-    user_in: schemas.UserCreate,
-    current_user: models.User = Depends(permission.get_current_superuser),
+        *,
+        background_tasks: BackgroundTasks,
+        db: Session = Depends(get_db),
+        user_in: schemas.UserCreate,
 ) -> Any:
     """
     Create new user.
@@ -59,21 +48,22 @@ def create_user(
             detail="The user with this username already exists in the system.",
         )
     user = services.user_crud.create(db, schema=user_in)
-    # if settings.EMAILS_ENABLED and user_in.email:
-    #     send_new_account_email(
-    #         email_to=user_in.email, username=user_in.email, password=user_in.password
-    #     )
+    if settings.EMAILS_ENABLED and user_in.email:
+        background_tasks.add_task(
+            send_new_account_email, email_to=user_in.email, username=user_in.email,
+            password=user_in.password
+        )
     return user
 
 
-@router.put("/me", response_model=schemas.User)
+@router.put("/me", response_model=schemas.UserInResponse)
 def update_user_me(
-    *,
-    db: Session = Depends(get_db),
-    password: str = Body(None),
-    full_name: str = Body(None),
-    email: EmailStr = Body(None),
-    current_user: models.User = Depends(permission.get_current_active_user),
+        *,
+        db: Session = Depends(get_db),
+        password: str = Body(None),
+        full_name: str = Body(None),
+        email: EmailStr = Body(None),
+        current_user: models.User = Depends(permission.get_current_active_user),
 ) -> Any:
     """
     Update own user.
@@ -90,10 +80,10 @@ def update_user_me(
     return user
 
 
-@router.get("/me", response_model=schemas.User)
+@router.get("/me", response_model=schemas.UserInResponse)
 def read_user_me(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(permission.get_current_active_user),
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(permission.get_current_active_user),
 ) -> Any:
     """
     Get current user.
@@ -101,12 +91,12 @@ def read_user_me(
     return current_user
 
 
-@router.post("/open", response_model=schemas.User)
+@router.post("/open", response_model=schemas.UserInResponse)
 def create_user_open(
-    *,
-    db: Session = Depends(get_db),
-    password: str = Body(...),
-    email: EmailStr = Body(...),
+        *,
+        db: Session = Depends(get_db),
+        password: str = Body(...),
+        email: EmailStr = Body(...),
 ) -> Any:
     """
     Create new user without the need to be logged in.
@@ -127,11 +117,11 @@ def create_user_open(
     return user
 
 
-@router.get("/{user_id}", response_model=schemas.User)
+@router.get("/{user_id}", response_model=schemas.UserInResponse)
 def read_user_by_id(
-    user_id: int,
-    current_user: models.User = Depends(permission.get_current_active_user),
-    db: Session = Depends(get_db),
+        user_id: int,
+        current_user: models.User = Depends(permission.get_current_active_user),
+        db: Session = Depends(get_db),
 ) -> Any:
     """
     Get a specific user by id.
@@ -146,13 +136,14 @@ def read_user_by_id(
     return user
 
 
-@router.put("/{user_id}", response_model=schemas.User)
+@router.put("/{user_id}",
+            response_model=schemas.UserInResponse,
+            dependencies=[Depends(permission.get_current_superuser)])
 def update_user(
-    *,
-    db: Session = Depends(get_db),
-    user_id: int,
-    user_in: schemas.UserUpdate,
-    current_user: models.User = Depends(permission.get_current_superuser),
+        *,
+        db: Session = Depends(get_db),
+        user_id: int,
+        user_in: schemas.UserUpdate,
 ) -> Any:
     """
     Update a user.
