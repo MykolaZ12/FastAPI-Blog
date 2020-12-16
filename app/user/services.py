@@ -2,7 +2,6 @@ import logging
 import re
 import shutil
 import uuid
-from datetime import timedelta, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -10,12 +9,12 @@ import emails
 from emails.template import JinjaTemplate
 from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
-from jose import jwt
+
 
 from app.base.crud import CRUDBase
 from app.user.models import User
 from app.user.schemas import UserCreate, UserUpdate
-from config import settings, security
+from config import settings
 from config.security import get_password_hash, verify_password
 
 

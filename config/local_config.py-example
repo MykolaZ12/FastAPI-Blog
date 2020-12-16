@@ -8,3 +8,7 @@ SMTP_PORT = 587
 SMTP_TLS = True
 SMTP_USER = "your@email.com"
 SMTP_PASSWORD = "strong_password"
+
+
+CELERY_BROKER_URL = '://:/'
+CELERY_RESULT_BACKEND = '://:/'

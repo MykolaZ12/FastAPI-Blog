@@ -4,14 +4,13 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from starlette.background import BackgroundTasks
 
 from app.user import services, schemas
-from app.user.services import  send_reset_password_email
 from config import settings, security
 from config.security import get_password_hash, generate_password_reset_token, \
     verify_password_reset_token
 from db.db import get_db
+import tasks
 
 router = APIRouter()
 
@@ -40,7 +39,7 @@ def login_access_token(
 
 
 @router.post("/password-recovery/{email}")
-def recover_password(background_tasks: BackgroundTasks, email: str, db: Session = Depends(get_db)
+def recover_password(email: str, db: Session = Depends(get_db)
                      ) -> Any:
     """
     Password Recovery
@@ -53,9 +52,11 @@ def recover_password(background_tasks: BackgroundTasks, email: str, db: Session 
         )
     password_reset_token = generate_password_reset_token(email=email)
 
-    background_tasks.add_task(
-        send_reset_password_email, email_to=user.email, email=email, token=password_reset_token
-    )
+    tasks.celery_send_reset_password_email.delay(email_to=user.email, email=email,
+                                                 token=password_reset_token)
+    # background_tasks.add_task(
+    #     send_reset_password_email, email_to=user.email, email=email, token=password_reset_token
+    # )
 
     return {"msg": "Password recovery email has been sent"}
 

@@ -4,10 +4,9 @@ from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from fastapi.encoders import jsonable_encoder
 from pydantic.networks import EmailStr
 from sqlalchemy.orm import Session
-from starlette.background import BackgroundTasks
 
+import tasks
 from app.user import schemas, services, models, permission
-from app.user.services import send_new_account_email
 from config import settings
 from config.settings import MEDIA_PATH
 from db.db import get_db
@@ -33,12 +32,7 @@ def read_users(
 @router.post("/",
              response_model=schemas.UserInResponse,
              dependencies=[Depends(permission.get_current_superuser)])
-def create_user(
-        *,
-        background_tasks: BackgroundTasks,
-        db: Session = Depends(get_db),
-        user_in: schemas.UserCreate,
-) -> Any:
+def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreate) -> Any:
     """
     Create new user.
     """
@@ -50,10 +44,13 @@ def create_user(
         )
     user = services.user_crud.create(db, schema=user_in)
     if settings.EMAILS_ENABLED and user_in.email:
-        background_tasks.add_task(
-            send_new_account_email, email_to=user_in.email, username=user_in.email,
-            password=user_in.password
+        tasks.celery_send_new_account_email.delay(
+            email_to=user_in.email, username=user_in.email, password=user_in.password
         )
+        # background_tasks.add_task(
+        #     send_new_account_email, email_to=user_in.email, username=user_in.email,
+        #     password=user_in.password
+        # )
     return user
 
 

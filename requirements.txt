@@ -7,3 +7,7 @@ python-jose[cryptography]
 passlib[bcrypt]
 pydantic
 emails
+email-validator
+python-slugify
+celery
+redis
