@@ -5,6 +5,22 @@ from app.user.models import User
 from db.db import Base
 
 
+class Category(Base):
+    __tablename__ = "category"
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    slug = Column(String(255))
+    name = Column(String(200))
+    date_created = Column(DateTime(timezone=True), server_default=func.now())
+    date_updated = Column(DateTime(timezone=True), onupdate=func.now())
+
+    user_id = Column(Integer, ForeignKey("user.id"))
+    user = relationship(User, back_populates="category")
+
+    post = relationship('Post', back_populates="category")
+
+    contact = relationship("Contact", back_populates="category")
+
+
 class Post(Base):
     __tablename__ = "post"
 
@@ -18,6 +34,9 @@ class Post(Base):
 
     user_id = Column(Integer, ForeignKey("user.id"))
     user = relationship(User, back_populates="post")
+
+    category_id = Column(Integer, ForeignKey("category.id"))
+    category = relationship(Category, back_populates="post")
 
     comment = relationship("Comment", back_populates="post")
 

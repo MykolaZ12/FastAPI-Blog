@@ -27,6 +27,8 @@ class User(Base):
 
     post = relationship("Post", back_populates="user")
 
+    category = relationship("Category", back_populates="user")
+
     comment = relationship("Comment", back_populates="user")
 
     liked = relationship("PostLike",

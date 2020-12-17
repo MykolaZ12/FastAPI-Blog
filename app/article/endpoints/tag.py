@@ -27,7 +27,7 @@ def get_list_tag(*, skip: int = 0, limit: int = 100, db: Session = Depends(get_d
 
 
 @router.post("/", response_model=schemas.TagCreate,
-             dependencies=[Depends(permission.get_current_superuser)])
+             dependencies=[Depends(permission.get_current_active_user)])
 def create_tag(
         *,
         db: Session = Depends(get_db),

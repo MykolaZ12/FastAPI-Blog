@@ -59,6 +59,33 @@ class TagInResponse(TagBase):
     date_created: datetime
 
 
+# Category
+class CategoryBase(BaseModel):
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class CategoryCreate(CategoryBase):
+    pass
+
+
+class CategoryUpdate(CategoryBase):
+    pass
+
+
+class CategoryInDB(CategoryBase):
+    user_id: int
+    slug: str
+
+
+class CategoryInResponse(CategoryBase):
+    id: int
+    slug: str
+    date_created: datetime
+
+
 # Post
 class PostBase(BaseModel):
     title: str
@@ -69,22 +96,26 @@ class PostBase(BaseModel):
 
 
 class PostCreate(PostBase):
-    tag: Optional[List[TagCreate]] = None
+    category: int
+    tag: Optional[List[str]] = None
 
 
 class PostUpdate(PostBase):
-    tag: Optional[List[TagCreate]] = None
+    category: int
+    tag: Optional[List[str]] = None
 
 
 class PostInDB(PostBase):
     slug: str
     user_id: int
-    tag: Optional[List[TagCreate]] = None
+    category: int
+    tag: Optional[List[str]] = None
 
 
 class PostInResponse(PostBase):
     id: str
     date_created: datetime
+    category: Optional[CategoryInResponse]
     tag: Optional[List[TagInResponse]] = None
     comment: Optional[List[CommentInResponse]] = None
 

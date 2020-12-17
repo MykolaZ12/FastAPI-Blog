@@ -16,11 +16,13 @@ class FilterQueryParams:
                  skip: int = 0,
                  limit: int = 100,
                  tag: Optional[List[str]] = Query(None),
+                 category: Optional[int] = Query(None),
                  ):
         self.search = search
         self.skip = skip
         self.limit = limit
         self.tag = tag
+        self.category = category
 
 
 @router.get("/{slug}", response_model=schemas.PostInResponse)
@@ -34,7 +36,7 @@ def get_post(*, slug: str, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[schemas.PostInResponse])
 def get_list_posts(db: Session = Depends(get_db), common: FilterQueryParams = Depends()):
     posts = services.post_filters(db=db, skip=common.skip, limit=common.limit, search=common.search,
-                                  tag=common.tag)
+                                  tag=common.tag, category=common.category)
     if not posts:
         raise HTTPException(status_code=404, detail="Posts not found")
     return posts
@@ -49,7 +51,7 @@ def create_post(
 ) -> Any:
     slug = services.generate_slug(schema.title)
     post_in_db = schemas.PostInDB(**schema.dict(), user_id=current_user.id, slug=slug)
-    post = services.post_crud.create_with_tags(db=db, post_schema=post_in_db)
+    post = services.post_crud.create_with_tags_and_category(db=db, post_schema=post_in_db)
     return post
 
 

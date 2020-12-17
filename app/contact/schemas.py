@@ -11,11 +11,11 @@ class ContactBase(BaseModel):
 
 
 class ContactCreate(ContactBase):
-    pass
+    category_id: int
 
 
 class ContactUpdate(ContactBase):
-    pass
+    category_id: int
 
 
 class ContactInResponse(ContactBase):

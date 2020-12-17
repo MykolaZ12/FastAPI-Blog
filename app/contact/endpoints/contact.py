@@ -9,7 +9,10 @@ from db.db import get_db
 router = APIRouter()
 
 
-@router.post("/subscription/{email}")
-def newsletter_subscription(email: EmailStr, db: Session = Depends(get_db)) -> Contact:
-    contact = services.contact_crud.create_contact_by_email(email=email, db=db)
+@router.post("/subscription/{category_id}/{email}")
+def newsletter_subscription(
+        email: EmailStr, category_id: int, db: Session = Depends(get_db)) -> Contact:
+    contact = services.contact_crud.create_contact_by_email(
+        email=email, category_id=category_id, db=db
+    )
     return contact

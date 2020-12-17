@@ -1,26 +1,27 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
-from pydantic import UUID4
 from slugify import slugify
 from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.article import schemas
-from .models import PostLike, Tag, Post, Comment
+from .models import PostLike, Tag, Post, Comment, Category
 from app.base.crud import CRUDBase
 
 
 class CRUDPost(CRUDBase[Post, schemas.PostCreate, schemas.PostUpdate]):
     """CRUD for Post"""
 
-    def create_with_tags(self, db: Session, *, post_schema: schemas.PostCreate) -> Post:
+    def create_with_tags_and_category(self, db: Session, *,
+                                      post_schema: schemas.PostCreate) -> Post:
         """Create post with user and tags"""
-        tags = tag_crud.get_or_create_tag_objects(db=db, tag_schema=post_schema.tag)
-        data = jsonable_encoder(post_schema, exclude={"tag"})
-        db_post = self.model(**data, tag=tags)
+        tags = tag_crud.get_or_create_tag_objects(db=db, tags=post_schema.tag)
+        category = category_crud.get(db=db, id=post_schema.category)
+        data = jsonable_encoder(post_schema, exclude={"tag", "category"})
+        print(tags)
+        print(category)
+        db_post = self.model(**data, tag=tags, category=category)
         db.add(db_post)
         db.commit()
         db.refresh(db_post)
@@ -40,23 +41,22 @@ class CRUDComment(CRUDBase[Comment, schemas.CommentCreate, schemas.CommentUpdate
 class CRUDTag(CRUDBase[Tag, schemas.TagCreate, schemas.TagUpdate]):
     """CRUD for Tag"""
 
-    def get_or_create_tag_objects(self, db: Session, tag_schema: List[schemas.TagCreate]
-                                 ) -> List[Tag]:
+    def get_or_create_tag_objects(self, db: Session, tags: List[str]) -> List[Tag]:
         """
-        Get list objects tags or/and create objects tags if tags does not existing in DB
+        Get list objects Tag or/and create objects Tag if tags does not existing in DB
         """
-        list_filters = []
-        for tag in tag_schema:
-            list_filters.append(self.model.name == tag.name)
-        tag_obj_list = db.query(self.model).filter(or_(*list_filters)).all()
-
+        tag_obj_list = db.query(self.model).filter(self.model.name.in_(tags)).all()
         # finding the difference between existing tags and non-existent tags
-        difference = list(set([t.name for t in tag_obj_list]) ^ set([t.name for t in tag_schema]))
-
+        difference = list(set([tag.name for tag in tag_obj_list]) ^ set([tag for tag in tags]))
+        # create new Tag objects in list
         if difference:
             for element in difference:
                 tag_obj_list.append(Tag(name=element))
         return tag_obj_list
+
+
+class CRUDCategory(CRUDBase[Category, schemas.CategoryCreate, schemas.CommentUpdate]):
+    pass
 
 
 # create CRUD object for posts
@@ -67,6 +67,9 @@ comment_crud = CRUDComment(Comment)
 
 # create CRUD object for tags
 tag_crud = CRUDTag(Tag)
+
+# create CRUD object for categories
+category_crud = CRUDCategory(Category)
 
 
 def like(db: Session, post_id: int, user_id: int):
@@ -94,25 +97,26 @@ def has_liked_post(db: Session, post_id: int, user_id: int):
 
 
 def post_filters(db: Session, skip: int = 0, limit: int = 100, search: str = None,
-                 tag: list = None):
+                 tag: Optional[List[str]] = None, category: int = None):
+    """
+    Filter Post by title, text, tag and category
+    """
     list_filters = []
     if search:
-        # add filter search by title
         list_filters.append(Post.title.match(search))
-        # add filter search by text
         list_filters.append(Post.text.match(search))
     if tag:
-        # add filter by tags
-        for tag_name in tag:
-            list_filters.append(Tag.name == tag_name)
+        list_filters.append(Tag.name.in_(tag))
+    if category:
+        list_filters.append(Post.category_id == category)
 
     filtered_posts = db.query(Post) \
         .filter(or_(*list_filters)) \
+        .join(Post.tag) \
         .order_by(Post.date_created.desc()) \
         .offset(skip) \
         .limit(limit) \
         .all()
-
     return filtered_posts
 
 
